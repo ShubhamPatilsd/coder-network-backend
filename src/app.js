@@ -142,9 +142,8 @@ app.post("/jwt_auth", (req, res) => {
 });
 
 app.post("/get/user", async function (req, res) {
-  const user_id = req.body.headers.id;
-
   try {
+    const user_id = req.body.headers.id;
     const data = await userData.find({ user_id: user_id });
 
     if (data.length === 0) {
