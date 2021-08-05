@@ -169,4 +169,20 @@ app.get("/get/posts", async function (req, res) {
   }
 });
 
+app.get("/user/:user/posts", async function (req, res) {
+  try {
+    const username = await axios.get(
+      `https://api.github.com/users/${req.params.user}`
+    );
+    const data = await postData.find({ user_id: username.id });
+
+    console.log(data);
+
+    res.json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(404).status("Invalid Username");
+  }
+});
+
 app.listen(port, () => console.log(`Listening on port ${port}`));
