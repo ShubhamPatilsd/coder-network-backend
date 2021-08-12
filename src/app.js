@@ -157,6 +157,29 @@ app.post("/get/user", async function (req, res) {
   }
 });
 
+app.post("/add/upvote", async function (req, res) {
+  let id;
+  try {
+    id = jwt.verify(req.body.headers.data.toString(), process.env.JWT_KEY).data
+      .jwt_id;
+  } catch (err) {
+    res.status(404).send("Invalid JWT Token");
+  }
+
+  const checkUpvotes = await postData.find({ _id: req.body.headers.post_id });
+
+  if (checkUpvotes.upvotes.includes(id)) {
+    // do something here
+    res.status(409).send("Upvote already exists");
+  } else {
+    await postData.updateOne(
+      { _id: req.body.headers.post_id },
+      { $set: { $push: { upvotes: id } } }
+    );
+    res.send("Upvote added");
+  }
+});
+
 app.get("/get/posts", async function (req, res) {
   try {
     const data = await postData.find({});
