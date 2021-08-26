@@ -172,16 +172,61 @@ app.post("/add/upvote", async function (req, res) {
     // do something here
     res.status(409).send("Upvote already exists");
   } else {
+    let new_downvotes = checkUpvotes[0].downvotes;
+
+    if (checkUpvotes[0].downvotes.includes(id)) {
+      new_downvotes = new_downvotes.filter((downvote) => downvote !== id);
+    }
+
     let new_upvotes = checkUpvotes[0].upvotes;
     new_upvotes.push(id);
     await postData.updateOne(
       { _id: req.body.headers.post_id },
-      { upvotes: new_upvotes }
+      { upvotes: new_upvotes, downvotes: new_downvotes }
     );
     console.log("upvote added");
     const send_data = await postData.find({ _id: req.body.headers.post_id });
 
-    res.json(send_data[0].upvotes);
+    res.json([send_data[0].upvotes, send_data[0].downvotes]);
+  }
+});
+
+app.post("/add/downvote", async function (req, res) {
+  let id = null;
+  try {
+    id = jwt.verify(req.body.headers.data.data.toString(), process.env.JWT_KEY)
+      .data.jwt_id;
+  } catch (err) {
+    res.status(404).send("Invalid JWT Token");
+  }
+
+  const checkDownvotes = await postData.find({ _id: req.body.headers.post_id });
+
+  if (checkDownvotes[0].downvotes.includes(id)) {
+    // do something here
+
+    res.status(409).send("Downvote already exists");
+  } else {
+    let new_upvotes = checkDownvotes[0].upvotes;
+
+    if (checkDownvotes[0].upvotes.includes(id)) {
+      //new_upvotes.splice(new_upvotes.indexOf(id), 1);
+
+      new_upvotes = new_upvotes.filter((upvote) => upvote !== id);
+    }
+    let new_downvotes = checkDownvotes[0].downvotes;
+    new_downvotes.push(id);
+    await postData.updateOne(
+      { _id: req.body.headers.post_id },
+      { downvotes: new_downvotes, upvotes: new_upvotes }
+    );
+    const e = await postData.find({ _id: req.body.headers.post_id });
+
+    console.log(e);
+    console.log("downvote added");
+    const send_data = await postData.find({ _id: req.body.headers.post_id });
+
+    res.json([send_data[0].upvotes, send_data[0].downvotes]);
   }
 });
 
