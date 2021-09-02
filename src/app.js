@@ -247,7 +247,35 @@ app.get("/user/:user/posts", async function (req, res) {
     const username = await axios.get(
       `https://api.github.com/users/${req.params.user}`
     );
-    const data = await postData.find({ user_id: username.id });
+
+    const data = await postData.find({ poster_id: username.data.id });
+
+    console.log("data", data);
+
+    res.json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(404).status("Invalid Username");
+  }
+});
+
+app.get("/feed/:user/posts", async function (req, res) {
+  let follow_list = [];
+  try {
+    const follow_id = await axios.get(
+      `https://api.github.com/users/${req.params.user}/following`
+    );
+
+    console.log(follow_id.data);
+
+    follow_id.data.forEach((following) => {
+      follow_list.push(following.id);
+    });
+
+    console.log(follow_list);
+
+    console.log(await postData.find({}));
+    const data = await postData.find({ poster_id: { $in: follow_list } });
 
     console.log(data);
 
