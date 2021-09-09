@@ -9,6 +9,8 @@ const port = 5000;
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 
+const url = require("url");
+
 const verify_jwt = require("./jwt_verify.js");
 
 //Here we are configuring express to use body-parser as middle-ware.
@@ -19,7 +21,7 @@ app.use(bodyParser.json());
 const mongoose = require("mongoose");
 const jwt_verify = require("./jwt_verify.js");
 
-const goodURLS = ["http://localhost:5000"];
+const goodURLS = ["localhost:3000"];
 
 const mongoString = process.env.MONGO_DB_CONNECT_STRING;
 
@@ -69,6 +71,16 @@ db.once("open", function () {
 const postData = mongoose.model("postdata", postSchema);
 
 const userData = mongoose.model("userdata", userSchema);
+
+app.use((req, res, next) => {
+  console.log(url.parse(req.headers.referer).host);
+  if (goodURLS.indexOf(url.parse(req.headers.referer).host) < 0) {
+    res.status(400).send("Request not coming from certified URLs!");
+    console.log(req.headers.referer);
+  }
+
+  next();
+});
 
 app.post("/new/user", async (req, res) => {
   const id = verify_jwt(req.body.headers.id.data);
@@ -131,14 +143,9 @@ app.post("/new/post", async (req, res) => {
 });
 
 app.post("/jwt_auth", (req, res) => {
-  if (goodURLS.indexOf(req.get("origin")) < 0) {
-    res.status(400).send("Request not coming from certified URLs!");
-    console.log(req.get("origin"));
-  } else {
-    const req_data = req.body.headers.data;
+  const req_data = req.body.headers.data;
 
-    res.send(jwt.sign({ data: req_data }, process.env.JWT_KEY));
-  }
+  res.send(jwt.sign({ data: req_data }, process.env.JWT_KEY));
 });
 
 app.post("/get/user", async function (req, res) {
