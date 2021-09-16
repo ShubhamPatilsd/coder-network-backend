@@ -3,6 +3,8 @@ const express = require("express");
 const app = express();
 require("dotenv").config();
 
+const cors = require("cors");
+
 const axios = require("axios");
 
 const port = 5000;
@@ -14,6 +16,8 @@ const url = require("url");
 const verify_jwt = require("./jwt_verify.js");
 
 //Here we are configuring express to use body-parser as middle-ware.
+
+app.use(cors({ origin: "http://localhost:3000" }));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -72,25 +76,30 @@ const postData = mongoose.model("postdata", postSchema);
 
 const userData = mongoose.model("userdata", userSchema);
 
-app.use((req, res, next) => {
-  console.log(url.parse(req.headers.referer).host);
-  if (goodURLS.indexOf(url.parse(req.headers.referer).host) < 0) {
-    res.status(400).send("Request not coming from certified URLs!");
-    console.log(req.headers.referer);
-  }
+// app.use((req, res, next) => {
+//   console.log(url.parse(req.headers.referer).host);
+//   if (goodURLS.indexOf(url.parse(req.headers.referer).host) < 0) {
+//     res.status(400).send("Request not coming from certified URLs!");
+//     console.log(req.headers.referer);
+//   }
 
-  next();
-});
+//   next();
+// });
 
 app.post("/new/user", async (req, res) => {
-  const id = verify_jwt(req.body.headers.id.data);
+  console.log("sdfsdfsdfsdfsdf");
+  console.log(req.headers.jwt_id);
+
+  const id = verify_jwt(req.headers.jwt_id);
+
   if (!id) {
     res.status(404).send("Invalid JWT Token");
   }
+  console.log("newinfo");
   console.log(id);
   try {
     //console.log('trying now')
-    const data = await userData.find({ user_id: id });
+    const data = await userData.find({ user_id: id.jwt_id });
     //console.log(data);
     if (data.length === 0) {
       const newUserData = new userData({
@@ -103,6 +112,7 @@ app.post("/new/user", async (req, res) => {
       });
     }
   } catch (err) {
+    console.log(err);
     res.status(400).send(err);
   }
 });
@@ -110,13 +120,13 @@ app.post("/new/user", async (req, res) => {
 app.post("/new/post", async (req, res) => {
   let id;
   try {
-    id = jwt.verify(req.body.headers.data.toString(), process.env.JWT_KEY).data
+    id = jwt.verify(req.headers.data.data.toString(), process.env.JWT_KEY).data
       .jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
   }
 
-  if (req.body.headers.body.length > 500) {
+  if (req.headers.data.body.length > 500) {
     res.status(500).send("Message body too long");
   }
 
@@ -124,7 +134,7 @@ app.post("/new/post", async (req, res) => {
   try {
     const username = await axios.get(`https://api.github.com/user/${id}`);
     const newPostData = new postData({
-      body: req.body.headers.body,
+      body: req.headers.data.body,
       poster_id: id,
       username: username.data.login,
     });
@@ -143,14 +153,16 @@ app.post("/new/post", async (req, res) => {
 });
 
 app.post("/jwt_auth", (req, res) => {
-  const req_data = req.body.headers.data;
+  const req_data = req.body.data;
 
-  res.send(jwt.sign({ data: req_data }, process.env.JWT_KEY));
+  const signed = jwt.sign({ data: req_data }, process.env.JWT_KEY);
+
+  res.send(signed);
 });
 
 app.post("/get/user", async function (req, res) {
   try {
-    const user_id = req.body.headers.id;
+    const user_id = req.headers.data.id;
     const data = await userData.find({ user_id: user_id });
 
     if (data.length === 0) {
@@ -167,13 +179,13 @@ app.post("/get/user", async function (req, res) {
 app.post("/add/upvote", async function (req, res) {
   let id = null;
   try {
-    id = jwt.verify(req.body.headers.data.data.toString(), process.env.JWT_KEY)
+    id = jwt.verify(req.headers.data.data.data.toString(), process.env.JWT_KEY)
       .data.jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
   }
 
-  const checkUpvotes = await postData.find({ _id: req.body.headers.post_id });
+  const checkUpvotes = await postData.find({ _id: req.headers.data.post_id });
 
   if (checkUpvotes[0].upvotes.includes(id)) {
     // do something here
@@ -188,11 +200,13 @@ app.post("/add/upvote", async function (req, res) {
     let new_upvotes = checkUpvotes[0].upvotes;
     new_upvotes.push(id);
     await postData.updateOne(
-      { _id: req.body.headers.post_id },
+      { _id: req.headers.data.post_id },
       { upvotes: new_upvotes, downvotes: new_downvotes }
     );
     console.log("upvote added");
-    const send_data = await postData.find({ _id: req.body.headers.post_id });
+    const send_data = await postData.find({
+      _id: req.body.headers.data.post_id,
+    });
 
     res.json([send_data[0].upvotes, send_data[0].downvotes]);
   }
@@ -201,13 +215,13 @@ app.post("/add/upvote", async function (req, res) {
 app.post("/add/downvote", async function (req, res) {
   let id = null;
   try {
-    id = jwt.verify(req.body.headers.data.data.toString(), process.env.JWT_KEY)
+    id = jwt.verify(req.headers.data.data.data.toString(), process.env.JWT_KEY)
       .data.jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
   }
 
-  const checkDownvotes = await postData.find({ _id: req.body.headers.post_id });
+  const checkDownvotes = await postData.find({ _id: req.headers.data.post_id });
 
   if (checkDownvotes[0].downvotes.includes(id)) {
     // do something here
@@ -224,14 +238,14 @@ app.post("/add/downvote", async function (req, res) {
     let new_downvotes = checkDownvotes[0].downvotes;
     new_downvotes.push(id);
     await postData.updateOne(
-      { _id: req.body.headers.post_id },
+      { _id: req.headers.data.post_id },
       { downvotes: new_downvotes, upvotes: new_upvotes }
     );
-    const e = await postData.find({ _id: req.body.headers.post_id });
+    const e = await postData.find({ _id: req.headers.data.post_id });
 
     console.log(e);
     console.log("downvote added");
-    const send_data = await postData.find({ _id: req.body.headers.post_id });
+    const send_data = await postData.find({ _id: req.headers.data.post_id });
 
     res.json([send_data[0].upvotes, send_data[0].downvotes]);
   }
