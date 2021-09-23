@@ -76,31 +76,16 @@ const postData = mongoose.model("postdata", postSchema);
 
 const userData = mongoose.model("userdata", userSchema);
 
-// app.use((req, res, next) => {
-//   console.log(url.parse(req.headers.referer).host);
-//   if (goodURLS.indexOf(url.parse(req.headers.referer).host) < 0) {
-//     res.status(400).send("Request not coming from certified URLs!");
-//     console.log(req.headers.referer);
-//   }
-
-//   next();
-// });
-
 app.post("/new/user", async (req, res) => {
-  console.log("sdfsdfsdfsdfsdf");
-  console.log(req.headers.jwt_id);
-
   const id = verify_jwt(req.headers.jwt_id);
 
   if (!id) {
     res.status(404).send("Invalid JWT Token");
   }
-  console.log("newinfo");
-  console.log(id);
+
   try {
-    //console.log('trying now')
     const data = await userData.find({ user_id: id.jwt_id });
-    //console.log(data);
+
     if (data.length === 0) {
       const newUserData = new userData({
         user_id: id,
@@ -112,7 +97,6 @@ app.post("/new/user", async (req, res) => {
       });
     }
   } catch (err) {
-    console.log(err);
     res.status(400).send(err);
   }
 });
@@ -120,21 +104,23 @@ app.post("/new/user", async (req, res) => {
 app.post("/new/post", async (req, res) => {
   let id;
   try {
-    id = jwt.verify(req.headers.data.data.toString(), process.env.JWT_KEY).data
-      .jwt_id;
+    id = jwt.verify(req.body.data.toString(), process.env.JWT_KEY).data.jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
   }
 
-  if (req.headers.data.body.length > 500) {
+  if (req.body.body.length > 500) {
     res.status(500).send("Message body too long");
   }
 
-  //console.log(req.body);
   try {
-    const username = await axios.get(`https://api.github.com/user/${id}`);
+    const username = await axios.get(`https://api.github.com/user/${id}`, {
+      headers: {
+        authorization: `token ${process.env.AXIOS_AUTH_TOKEN}`,
+      },
+    });
     const newPostData = new postData({
-      body: req.headers.data.body,
+      body: req.body.body,
       poster_id: id,
       username: username.data.login,
     });
@@ -178,14 +164,16 @@ app.post("/get/user", async function (req, res) {
 
 app.post("/add/upvote", async function (req, res) {
   let id = null;
+
   try {
-    id = jwt.verify(req.headers.data.data.data.toString(), process.env.JWT_KEY)
+    id = jwt.verify(req.body.data.data.data.toString(), process.env.JWT_KEY)
       .data.jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
+    return;
   }
 
-  const checkUpvotes = await postData.find({ _id: req.headers.data.post_id });
+  const checkUpvotes = await postData.find({ _id: req.body.data.post_id });
 
   if (checkUpvotes[0].upvotes.includes(id)) {
     // do something here
@@ -200,12 +188,12 @@ app.post("/add/upvote", async function (req, res) {
     let new_upvotes = checkUpvotes[0].upvotes;
     new_upvotes.push(id);
     await postData.updateOne(
-      { _id: req.headers.data.post_id },
+      { _id: req.body.data.post_id },
       { upvotes: new_upvotes, downvotes: new_downvotes }
     );
     console.log("upvote added");
     const send_data = await postData.find({
-      _id: req.body.headers.data.post_id,
+      _id: req.body.data.post_id,
     });
 
     res.json([send_data[0].upvotes, send_data[0].downvotes]);
@@ -215,13 +203,14 @@ app.post("/add/upvote", async function (req, res) {
 app.post("/add/downvote", async function (req, res) {
   let id = null;
   try {
-    id = jwt.verify(req.headers.data.data.data.toString(), process.env.JWT_KEY)
+    id = jwt.verify(req.body.data.data.data.toString(), process.env.JWT_KEY)
       .data.jwt_id;
   } catch (err) {
     res.status(404).send("Invalid JWT Token");
+    return;
   }
 
-  const checkDownvotes = await postData.find({ _id: req.headers.data.post_id });
+  const checkDownvotes = await postData.find({ _id: req.body.data.post_id });
 
   if (checkDownvotes[0].downvotes.includes(id)) {
     // do something here
@@ -238,14 +227,13 @@ app.post("/add/downvote", async function (req, res) {
     let new_downvotes = checkDownvotes[0].downvotes;
     new_downvotes.push(id);
     await postData.updateOne(
-      { _id: req.headers.data.post_id },
+      { _id: req.body.data.post_id },
       { downvotes: new_downvotes, upvotes: new_upvotes }
     );
-    const e = await postData.find({ _id: req.headers.data.post_id });
+    const e = await postData.find({ _id: req.body.data.post_id });
 
-    console.log(e);
     console.log("downvote added");
-    const send_data = await postData.find({ _id: req.headers.data.post_id });
+    const send_data = await postData.find({ _id: req.body.data.post_id });
 
     res.json([send_data[0].upvotes, send_data[0].downvotes]);
   }
@@ -254,8 +242,6 @@ app.post("/add/downvote", async function (req, res) {
 app.get("/get/posts", async function (req, res) {
   try {
     const data = await postData.find({});
-
-    console.log(data);
 
     res.json(data);
   } catch (err) {
@@ -266,12 +252,15 @@ app.get("/get/posts", async function (req, res) {
 app.get("/user/:user/posts", async function (req, res) {
   try {
     const username = await axios.get(
-      `https://api.github.com/users/${req.params.user}`
+      `https://api.github.com/users/${req.params.user}`,
+      {
+        headers: {
+          authorization: `token ${process.env.AXIOS_AUTH_TOKEN}`,
+        },
+      }
     );
 
     const data = await postData.find({ poster_id: username.data.id });
-
-    console.log("data", data);
 
     res.json(data);
   } catch (err) {
@@ -284,18 +273,18 @@ app.get("/feed/:user/posts", async function (req, res) {
   let follow_list = [];
   try {
     const follow_id = await axios.get(
-      `https://api.github.com/users/${req.params.user}/following`
+      `https://api.github.com/users/${req.params.user}/following`,
+      {
+        headers: {
+          authorization: `token ${process.env.AXIOS_AUTH_TOKEN}`,
+        },
+      }
     );
-
-    console.log(follow_id.data);
 
     follow_id.data.forEach((following) => {
       follow_list.push(following.id);
     });
 
-    console.log(follow_list);
-
-    console.log(await postData.find({}));
     const data = await postData.find({ poster_id: { $in: follow_list } });
 
     console.log(data);
