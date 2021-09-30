@@ -38,15 +38,13 @@ const userSchema = new mongoose.Schema({
     {
       title: String,
       body: String,
-      // upvotes: Number,
-      // downvotes: Number,
+
       date: Date,
       replies: [
         {
           title: String,
           body: String,
-          // upvotes: Number,
-          // downvotes: Number,
+
           date: Date,
         },
       ],
@@ -283,8 +281,6 @@ app.get("/feed/:user/posts", async function (req, res) {
     });
 
     const data = await postData.find({ poster_id: { $in: follow_list } });
-
-    console.log(data);
 
     res.json(data);
   } catch (err) {
