@@ -17,15 +17,12 @@ const verify_jwt = require("./jwt_verify.js");
 
 //Here we are configuring express to use body-parser as middle-ware.
 
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 const mongoose = require("mongoose");
-const jwt_verify = require("./jwt_verify.js");
-
-const goodURLS = ["localhost:3000"];
 
 const mongoString = process.env.MONGO_DB_CONNECT_STRING;
 
