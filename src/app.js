@@ -83,7 +83,7 @@ app.post("/new/user", async (req, res) => {
 
     if (data.length === 0) {
       const newUserData = new userData({
-        user_id: id,
+        user_id: id.jwt_id,
         posts: [{}],
       });
 
@@ -92,6 +92,7 @@ app.post("/new/user", async (req, res) => {
       });
     }
   } catch (err) {
+    console.log(err);
     res.status(400).send(err);
   }
 });
@@ -143,7 +144,8 @@ app.post("/jwt_auth", (req, res) => {
 
 app.post("/get/user", async function (req, res) {
   try {
-    const user_id = req.headers.data.id;
+    const user_id = req.body.id;
+
     const data = await userData.find({ user_id: user_id });
 
     if (data.length === 0) {
