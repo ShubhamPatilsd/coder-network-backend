@@ -18,3 +18,6 @@ The `JWT_KEY` is a randomly generated key that is used to "encrypt" authenticati
 `AXIOS_AUTH_TOKEN` is basically an access token so that you can send more requests to the GitHub API.
 
 The `FRONTEND_URL` basically is the URL for the frontend of the CoderNetwork. Frontend can be found at https://github.com/ShubhamPatilsd/coder-network-frontend
+
+
+*Also let's just pretend like the `app.js` file doesn't have more than 300 lines of code because I was dumb and didn't realize I could have multiple files for Express (I started this project when I was an Express noob).*
