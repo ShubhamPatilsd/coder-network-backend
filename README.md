@@ -1,4 +1,10 @@
 # coder-network-backend
+
+<div align="center"><img width="150" height="auto" src="https://github.githubassets.com/images/modules/logos_page/Octocat.png"/></div>
+<p align="center">Supports GitHub authentication!</p>
+
+<br/><br/>
+
 Backend for the CoderNetwork!
 
 Frontend for the CoderNetwork can be found at https://github.com/ShubhamPatilsd/coder-network-frontend
